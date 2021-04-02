@@ -5,10 +5,10 @@
 class camera {
 public:
   camera() {
-    const float aspect_ratio = 16.f / 9.f;
-    const float viewport_height = 2.0;
-    const float viewport_width = aspect_ratio * viewport_height;
-    const float focal_length = 1.0;
+    const real aspect_ratio = 16.f / 9.f;
+    const real viewport_height = 2.0;
+    const real viewport_width = aspect_ratio * viewport_height;
+    const real focal_length = 1.0;
 
     origin = point3(0, 0, 0);
     horizontal = vec3(viewport_width, 0, 0);
@@ -16,7 +16,7 @@ public:
     lower_left_corner = origin - horizontal / 2 - vertical / 2 - vec3(0, 0, focal_length);
   }
 
-  ray get_ray(float u, float v) const {
+  ray get_ray(real u, real v) const {
     return ray(origin, lower_left_corner + u * horizontal + v * vertical - origin);
   }
 

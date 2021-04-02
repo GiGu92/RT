@@ -6,28 +6,28 @@
 class sphere : public hittable {
 public:
   sphere() : center(0, 0, 0), radius(1) {};
-  sphere(point3 cen, float r) : center(cen), radius(r) {};
+  sphere(point3 cen, real r) : center(cen), radius(r) {};
 
-  virtual bool hit(const ray& r, float t_min, float t_max, hit_record& rec) const override;
+  virtual bool hit(const ray& r, real t_min, real t_max, hit_record& rec) const override;
 
 private:
   point3 center;
-  float radius;
+  real radius;
 };
 
-bool sphere::hit(const ray& r, float t_min, float t_max, hit_record& rec) const {
+bool sphere::hit(const ray& r, real t_min, real t_max, hit_record& rec) const {
   vec3 oc = r.origin() - center;
-  float a = r.direction().length_squared();
-  float half_b = dot(oc, r.direction());
-  float c = oc.length_squared() - radius * radius;
+  real a = r.direction().length_squared();
+  real half_b = dot(oc, r.direction());
+  real c = oc.length_squared() - radius * radius;
 
-  float discriminant = half_b * half_b - a * c;
+  real discriminant = half_b * half_b - a * c;
   if (discriminant < 0)
     return false;
-  float sqrtd = sqrtf(discriminant);
+  real sqrtd = sqrt(discriminant);
   
   // Find the nearest root that lies in the acceptable range.
-  float root = (-half_b - sqrtd) / a;
+  real root = (-half_b - sqrtd) / a;
   if (root < t_min || t_max < root) {
     root = (-half_b + sqrtd) / a;
     if (root < t_min || t_max < root)
