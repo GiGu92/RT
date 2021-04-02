@@ -2,22 +2,30 @@
 #include "ray.h"
 #include "vec3.h"
 
+#include <Shlwapi.h> // for ShellExecute
+
 #include <iostream>
 
-bool hit_sphere(const point3& center, float radius, const ray& r) {
+float hit_sphere(const point3& center, float radius, const ray& r) {
   vec3 oc = r.origin() - center;
-  float a = dot(r.direction(), r.direction());
-  float b = 2.f * dot(oc, r.direction());
-  float c = dot(oc, oc) - radius*radius;
-  float discriminant = b*b - 4*a*c;
-  return discriminant > 0;
+  float a = r.direction().length_squared();
+  float half_b = dot(oc, r.direction());
+  float c = oc.length_squared() - radius*radius;
+  float discriminant = half_b*half_b - a*c;
+  if (discriminant < 0)
+    return -1.f;
+  else
+    return (-half_b - sqrtf(discriminant)) / a;
 }
 
 color ray_color(const ray& r) {
-  if (hit_sphere(point3(0, 0, -1), 0.5, r))
-    return color(1, 0, 0);
+  float t = hit_sphere(point3(0, 0, -1), 0.5, r);
+  if (t > 0) {
+    vec3 N = unit_vector(r.at(t) - vec3(0, 0, -1));
+    return 0.5f * color(N.x()+1, N.y()+1, N.z()+1);
+  }
   vec3 unit_direction = unit_vector(r.direction());
-  float t = 0.5f * (unit_direction.y() + 1.0f);
+  t = 0.5f * (unit_direction.y() + 1.0f);
   return (1.0f - t) * color(1.f, 1.f, 1.f) + t * color(.5f, .7f, 1.f);
 }
 
@@ -43,7 +51,7 @@ int main() {
 
   for (int j = image_height - 1; j >= 0; --j) {
     int line = image_height - 1 - j;
-    int percent = roundf((line / float(image_height)) * 100.f);
+    int percent = (int)roundf((line / float(image_height)) * 100.f);
     std::cerr << "\rScanlines: " << line << "/" << image_height << " (" << percent << "%)" << std::flush;
     for (int i = 0; i < image_width; ++i) {
       float u = float(i) / (image_width - 1);
@@ -55,4 +63,6 @@ int main() {
   }
 
   std::cerr << "\nDone.\n";
+
+  ShellExecute(0, 0, L"image.ppm", 0, 0, SW_SHOW);
 }
