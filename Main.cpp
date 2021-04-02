@@ -3,6 +3,7 @@
 #include "color.h"
 #include "hittable_list.h"
 #include "sphere.h"
+#include "camera.h"
 
 #include <iostream>
 #include <Shlwapi.h> // for ShellExecute
@@ -22,6 +23,7 @@ int main() {
   const float aspect_ratio = 16.f / 9.f;
   const int image_width = 400;
   const int image_height = static_cast<int>(image_width / aspect_ratio);
+  const int samples_per_pixel = 100;
 
   // World
   hittable_list world;
@@ -29,13 +31,7 @@ int main() {
   world.add(make_shared<sphere>(point3(0, -100.5f, -1), 100.f));
 
   // Camera
-  float viewport_height = 2.0;
-  float viewport_width = aspect_ratio * viewport_height;
-  float focal_length = 1.0;
-  point3 origin(0, 0, 0);
-  vec3 horizontal(viewport_width, 0, 0);
-  vec3 vertical(0, viewport_height, 0);
-  point3 lower_left_corner = origin - horizontal/2 - vertical/2 - vec3(0, 0, focal_length);
+  camera cam;
   
   // Render
 
@@ -46,11 +42,15 @@ int main() {
     int percent = (int)roundf((line / float(image_height)) * 100.f);
     std::cerr << "\rScanlines: " << line << "/" << image_height << " (" << percent << "%)" << std::flush;
     for (int i = 0; i < image_width; ++i) {
-      float u = float(i) / (image_width - 1);
-      float v = float(j) / (image_height - 1);
-      ray r(origin, lower_left_corner + u*horizontal + v*vertical - origin);
-      color pixel_color = ray_color(r, world);
-      write_color(std::cout, pixel_color);
+      color pixel_color(0, 0, 0);
+      for (int s = 0; s < samples_per_pixel; ++s) {
+        float u = float(i + random_float()) / (image_width - 1);
+        float v = float(j + random_float()) / (image_height - 1);
+        ray r = cam.get_ray(u, v);
+        pixel_color += ray_color(r, world);
+
+      }
+      write_color(std::cout, pixel_color, samples_per_pixel);
     }
   }
 
