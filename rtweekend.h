@@ -5,7 +5,7 @@
 #include <limits>
 #include <memory>
 
-#define real float
+typedef float real;
 #pragma warning(disable:4305) // warning C4305: 'initializing': truncation from 'double' to 'float'
 #pragma warning(disable:4244) // warning C4244: 'return': conversion from 'double' to 'float', possible loss of data
 
