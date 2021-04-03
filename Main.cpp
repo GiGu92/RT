@@ -55,7 +55,12 @@ int main() {
 
   // Camera
 
-  camera cam(point3(-2, 2, 1), point3(0, 0, -1), vec3(0, 1, 0), 20, aspect_ratio);
+  point3 lookfrom(3, 3, 2);
+  point3 lookat(0, 0, -1);
+  vec3 vup(0, 1, 0);
+  real dist_to_focus = (lookfrom - lookat).length();
+  real aperture = 2.0;
+  camera cam(lookfrom, lookat, vup, 20, aspect_ratio, aperture, dist_to_focus);
   
   // Render
 
@@ -81,4 +86,4 @@ int main() {
   std::cerr << "\nDone.\n";
 
   ShellExecute(0, 0, L"image.ppm", 0, 0, SW_SHOW);
-}
+};
