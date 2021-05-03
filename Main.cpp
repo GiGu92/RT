@@ -8,9 +8,11 @@
 
 #include <iostream>
 #include <chrono>
+#include <execution>
+#include <mutex>
 #include <Shlwapi.h> // for ShellExecute
 
-static int num_rays = 0;
+std::atomic_int num_rays = 0;
 
 color ray_color(const ray& r, const hittable& world, int depth) {
 
@@ -18,7 +20,7 @@ color ray_color(const ray& r, const hittable& world, int depth) {
   if (depth <= 0)
     return color(0, 0, 0);
 
-  num_rays++;
+  ++num_rays;
 
   hit_record rec;
   if (world.hit(r, 0.001, infinity, rec)) {
@@ -90,6 +92,17 @@ void simple_scene(hittable_list& world) {
   world.add(make_shared<sphere>(point3(1.0, 0.0, -1.0), 0.5, material_right));
 }
 
+static void write_image(std::ostream& out, const int image_width, const int image_height, unsigned char* image_bytes)
+{
+  std::cout << "P3\n" << image_width << ' ' << image_height << "\n255\n";
+  for (int j = 0; j < image_height; j++) {
+    for (int i = 0; i < image_width; i++) {
+      int idx = (j * image_width + i) * 3;
+      out << (int)image_bytes[idx] << ' ' << (int)image_bytes[idx + 1] << ' ' << (int)image_bytes[idx + 2] << '\n';
+    }
+  }
+}
+
 int main() {
 
   // Image
@@ -117,36 +130,42 @@ int main() {
 
   // Render
 
-  std::cout << "P3\n" << image_width << ' ' << image_height << "\n255\n";
-
-  auto print_progress = [](int done, int all) {
-    int percent = (int)round((done / real(all)) * 100);
-    std::cerr << "\rScanlines: " << done << "/" << all << " (" << percent << "%)" << std::flush;
-  };
+  std::vector<unsigned char> image_bytes(image_width * image_height * 3);
+  std::vector<int> scanlines(image_height);
+  std::iota(scanlines.begin(), scanlines.end(), 0);
+  int num_scanlines_done = 0;
+  std::mutex mutex;
 
   auto start_time = std::chrono::high_resolution_clock::now();
+  std::for_each(std::execution::par_unseq, scanlines.begin(), scanlines.end(),
+    [&](int j) {
+      for (int i = 0; i < image_width; ++i) {
+        color pixel_color(0, 0, 0);
+        for (int s = 0; s < samples_per_pixel; ++s) {
+          real u = real(i + random_real()) / (image_width - 1);
+          real v = real(image_height - 1 - j + random_real()) / (image_height - 1);
+          ray r = cam.get_ray(u, v);
+          pixel_color += ray_color(r, world, max_depth);
 
-  for (int j = image_height - 1; j >= 0; --j) {
-    print_progress(image_height - 1 - j, image_height);
-    for (int i = 0; i < image_width; ++i) {
-      color pixel_color(0, 0, 0);
-      for (int s = 0; s < samples_per_pixel; ++s) {
-        real u = real(i + random_real()) / (image_width - 1);
-        real v = real(j + random_real()) / (image_height - 1);
-        ray r = cam.get_ray(u, v);
-        pixel_color += ray_color(r, world, max_depth);
-
+        }
+        int idx = (j * image_width + i) * 3;
+        write_color(&image_bytes[idx], pixel_color, samples_per_pixel);
       }
-      write_color(std::cout, pixel_color, samples_per_pixel);
-    }
-  }
-  print_progress(image_height, image_height);
+      {
+        std::scoped_lock lock(mutex);
+        int done = ++num_scanlines_done;
+        int percent = (int)round((done / real(image_height)) * 100);
+        std::cerr << "\rScanlines: " << done << "/" << image_height << " (" << percent << "%)" << std::flush;
+      }
+    });
 
   auto finish_time = std::chrono::high_resolution_clock::now();
   real seconds = (finish_time - start_time).count() * 1e-9;
 
   std::cerr << "\nDone " << num_rays << " rays in " << seconds << " seconds."
     << " (" << num_rays * 1e-6 / seconds << " Mray/s)";
+
+  write_image(std::cout, image_width, image_height, image_bytes.data());
 
   getchar();
 
